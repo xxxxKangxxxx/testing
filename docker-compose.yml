@@ -1,27 +1,28 @@
 version: "3.8"
 
 services: 
-  bastion: 
-    image: ssh-server
-    container_name: bastion
-    build:
-      context: . 
-      dockerfile: ssh-server.Dockerfile
+  app:
+    image: "alpine:latest"
+    container_name: main_app
     ports: 
-      - "2222:22"
-    networks: 
-      - public-net
-      - private-net
+      - "8080:8080"
+    volumes: 
+      - app_logs:/var/log/app
+    command: ["sh", "-c", "mkdir -p /var/log/app && while true; do echo $(data) ' - 로그 메시지 예제' >> /var/log/app/app.log; sleep 2; done"]
 
-  private1: 
-    image: loveis/fastapi
-    container_name: private1
-    command: uvicorn main:app --host 0.0.0.0 --port 8000
-    networks: 
-      - private-net
+  log-collector: 
+    image: fluent/fluentd
+    container_name: sidecar_logger
+    depends_on:
+      - app
+    volumes:
+      - app_logs:/fluentd/log
+      - ./fluentd/conf:/fluentd/etc
+    ports:
+      - "24224:24224"
 
-networks:
-  public-net:
-  private-net: 
+volumes: 
+  app_logs:
+
 
 
